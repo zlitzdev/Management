@@ -1,0 +1,17 @@
+{
+	"name": "com.zlitz.management",
+	"displayName": "Zlitz's Management",
+	"author": "ZlitzGames",
+	"version": "1.0.0",
+	"unity": "2022.3",
+	"description": "Add some features that help with object management.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/zlitzdev/Management.git"
+	},
+	"keywords": [
+	],
+	"samples": [
+	]
+}
