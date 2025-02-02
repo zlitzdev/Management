@@ -19,15 +19,8 @@ namespace Zlitz.General.Management
             Type genericType = typeof(RegisterableScriptable<,>);
             foreach (Type type in types)
             {
-                AutoLoadAttribute autoload = type.GetCustomAttribute<AutoLoadAttribute>();
-                if (autoload == null)
-                {
-                    continue;
-                }
-
                 if (!DerivedFromGeneric(type, genericType, out Type baseType))
                 {
-                    Debug.LogWarning($"AutoLoad attribute should only be used on classes that inherit RegisterableScriptable<T, TId>");
                     continue;
                 }
 
@@ -36,6 +29,12 @@ namespace Zlitz.General.Management
                     MethodInfo loadMethod = baseType.GetMethod("Load", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
                     loadMethod?.Invoke(null, null);
                 }
+            }
+
+            foreach (Type loadedType in loadedTypes)
+            {
+                MethodInfo postLoadMethod = loadedType.GetMethod("PostLoad", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                postLoadMethod?.Invoke(null, null);
             }
         }
 

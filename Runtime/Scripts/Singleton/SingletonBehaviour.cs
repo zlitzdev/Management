@@ -12,6 +12,12 @@ namespace Zlitz.General.Management
         {
             get
             {
+                if (!Application.isPlaying)
+                {
+                    Debug.LogWarning("Singleton Behaviours can only be accessed in play mode");
+                    return null;
+                }
+
                 lock (s_lock)
                 {
                     if (s_instance == null)
@@ -26,7 +32,7 @@ namespace Zlitz.General.Management
                             s_instance.Setup();
                         }
 
-                        if ((s_instance?.dontDestroyOnLoad ?? false) && Application.isPlaying)
+                        if (s_instance?.dontDestroyOnLoad ?? false)
                         {
                             DontDestroyOnLoad(s_instance.gameObject);
                         }

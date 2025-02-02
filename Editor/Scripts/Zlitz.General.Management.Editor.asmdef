@@ -1,0 +1,18 @@
+{
+    "name": "Zlitz.General.Management.Editor",
+    "rootNamespace": "Zlitz.General.Management",
+    "references": [
+        "GUID:2c19e43f743260645af9159a1e056da3"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

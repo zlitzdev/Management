@@ -12,6 +12,10 @@ namespace Zlitz.General.Management
 
         protected virtual bool shouldRegister => true;
 
+        protected virtual void OnRegistered()
+        {
+        }
+
         public static IEnumerable<T> entries => s_entries.Values;
 
         public static T Get(TId id)
@@ -23,7 +27,12 @@ namespace Zlitz.General.Management
             return entry;
         }
 
-        public static void Load()
+        public static CachedValue<T> GetCached(TId id)
+        {
+            return new CachedValue<T>(() => Get(id));
+        }
+
+        internal static void Load()
         {
             s_entries.Clear();
 
@@ -39,6 +48,14 @@ namespace Zlitz.General.Management
                 {
                     Debug.LogWarning($"[{typeof(T).Name}] Repeated ID: {entry.id}");
                 }
+            }
+        }
+        
+        internal static void PostLoad()
+        {
+            foreach (T entry in s_entries.Values)
+            {
+                entry?.OnRegistered();
             }
         }
     }
