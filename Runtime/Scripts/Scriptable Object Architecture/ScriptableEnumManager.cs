@@ -238,13 +238,13 @@ namespace Zlitz.General.Management
                 return instance;
             }
 
-            public static void Save()
+            public static void Save(ScriptableEnumManager instance)
             {
-                ScriptableEnumManager instance = Retrieve();
                 if (instance == null)
                 {
                     return;
                 }
+                s_loaded = instance;
                 InternalEditorUtility.SaveToSerializedFileAndForget(new UnityEngine.Object[] { instance }, s_savePath, true);
             }
 
@@ -272,7 +272,8 @@ namespace Zlitz.General.Management
                 newInstance.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontUnloadUnusedAsset;
 
                 s_loaded = newInstance;
-                Save();
+
+                Save(newInstance);
 
                 return newInstance;
             }

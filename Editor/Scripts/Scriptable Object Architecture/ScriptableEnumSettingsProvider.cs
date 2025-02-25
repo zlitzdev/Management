@@ -58,9 +58,10 @@ namespace Zlitz.General.Management
 
         public override void OnActivate(string searchContext, VisualElement rootElement)
         {
-            if (m_serializedSettings == null && ScriptableEnumManager.instance != null)
+            ScriptableEnumManager settings = ScriptableEnumManager.IO.RetrieveFromProjectSettings();
+            if (m_serializedSettings == null && settings != null)
             {
-                m_serializedSettings = new SerializedObject(ScriptableEnumManager.instance);
+                m_serializedSettings = new SerializedObject(settings);
 
                 m_entriesProperty = m_serializedSettings.FindProperty("m_entries");
             }
@@ -88,7 +89,7 @@ namespace Zlitz.General.Management
 
             foreach (KeyValuePair<Type, Type> scriptableEnumType in s_scriptableEnumTypes)
             {
-                VisualElement group = CreateScriptableEnumGroup(scriptableEnumType.Key, scriptableEnumType.Value);
+                VisualElement group = CreateScriptableEnumGroup(scriptableEnumType.Key, scriptableEnumType.Value, settings);
                 if (group == null)
                 {
                     continue;
@@ -97,7 +98,7 @@ namespace Zlitz.General.Management
             }
         }
 
-        private VisualElement CreateScriptableEnumGroup(Type type, Type baseType)
+        private VisualElement CreateScriptableEnumGroup(Type type, Type baseType, ScriptableEnumManager settings)
         {
             if (type == null || baseType == null)
             {
@@ -134,8 +135,10 @@ namespace Zlitz.General.Management
                 AlignedField alignedField = new AlignedField();
                 root.Add(alignedField);
 
-                root.onUpdateConflictState += ScriptableEnumManager.IO.Save;
-
+                root.onUpdateConflictState += () =>
+                {
+                    ScriptableEnumManager.IO.Save(settings);
+                };
                 IMGUIContainer idField = new IMGUIContainer(() =>
                 {
                     float labelWidth = EditorGUIUtility.labelWidth;
@@ -478,8 +481,6 @@ namespace Zlitz.General.Management
     {
         static ScriptableEnumSettingsInitializer()
         {
-            ScriptableEnumManager instance = ScriptableEnumManager.instance;
-
             ScriptableEnumSettingsProvider.ResetScriptableEnumTypes();
         }
     }
