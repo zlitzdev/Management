@@ -9,30 +9,30 @@ using UnityEditor.UIElements;
 
 namespace Zlitz.General.Management
 {
-    internal class ScriptableEnumSettingsProvider : SettingsProvider
+    internal class ScriptableSingletonSettingsProvider : SettingsProvider
     {
-        private static readonly Dictionary<Type, Type> s_scriptableEnumTypes = new Dictionary<Type, Type>();
+        private static readonly Dictionary<Type, Type> s_scriptableSingletonTypes = new Dictionary<Type, Type>();
 
-        internal static void ResetScriptableEnumTypes()
+        internal static void ResetScriptableSingletonTypes()
         {
-            s_scriptableEnumTypes.Clear();
+            s_scriptableSingletonTypes.Clear();
             foreach (Type type in AllTypes())
             {
-                if (IsScriptableEnumType(type, out Type baseType))
+                if (IsScriptableSingletonType(type, out Type baseType))
                 {
-                    s_scriptableEnumTypes.TryAdd(type, baseType);
+                    s_scriptableSingletonTypes.TryAdd(type, baseType);
                 }
             }
         }
 
-        private static bool IsScriptableEnumType(Type type, out Type baseType)
+        private static bool IsScriptableSingletonType(Type type, out Type baseType)
         {
-            Type genericScriptableEnumType = typeof(ScriptableEnum<,>);
+            Type genericScriptableSingletonType = typeof(ScriptableSingleton<>);
 
             type = type.BaseType;
             while (type != null && type.IsGenericType)
             {
-                if (type.GetGenericTypeDefinition() == genericScriptableEnumType)
+                if (type.GetGenericTypeDefinition() == genericScriptableSingletonType)
                 {
                     baseType = type;
                     return true;
@@ -56,7 +56,7 @@ namespace Zlitz.General.Management
 
         public override void OnActivate(string searchContext, VisualElement rootElement)
         {
-            ScriptableEnumManager settings = ScriptableEnumManager.IO.RetrieveFromProjectSettings();
+            ScriptableSingletonManager settings = ScriptableSingletonManager.IO.RetrieveFromProjectSettings();
             if (m_serializedSettings == null && settings != null)
             {
                 m_serializedSettings = new SerializedObject(settings);
@@ -71,12 +71,12 @@ namespace Zlitz.General.Management
 
             if (m_serializedSettings == null)
             {
-                HelpBox helpBox = new HelpBox("No ScriptableEnumManager found.", HelpBoxMessageType.Error);
+                HelpBox helpBox = new HelpBox("No ScriptableSingletonManager found.", HelpBoxMessageType.Error);
                 rootElement.Add(helpBox);
                 return;
             }
 
-            Label settingTitle = new Label("Scriptable Enum");
+            Label settingTitle = new Label("Scriptable Singleton");
             settingTitle.style.fontSize = 20.0f;
             settingTitle.style.marginBottom = 6.0f;
             settingTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
@@ -85,9 +85,9 @@ namespace Zlitz.General.Management
             VisualElement settingContent = new VisualElement();
             rootElement.Add(settingContent);
 
-            foreach (KeyValuePair<Type, Type> scriptableEnumType in s_scriptableEnumTypes)
+            foreach (KeyValuePair<Type, Type> scriptableEnumType in s_scriptableSingletonTypes)
             {
-                VisualElement group = CreateScriptableEnumGroup(scriptableEnumType.Key, scriptableEnumType.Value, settings);
+                VisualElement group = CreateScriptableSingletonGroup(scriptableEnumType.Key, scriptableEnumType.Value, settings);
                 if (group == null)
                 {
                     continue;
@@ -96,14 +96,14 @@ namespace Zlitz.General.Management
             }
         }
 
-        private VisualElement CreateScriptableEnumGroup(Type type, Type baseType, ScriptableEnumManager settings)
+        private VisualElement CreateScriptableSingletonGroup(Type type, Type baseType, ScriptableSingletonManager settings)
         {
             if (type == null || baseType == null)
             {
                 return null;
             }
 
-            Type idType = baseType.GetGenericArguments()[1];
+            Type idType = baseType.GetGenericArguments()[0];
 
             ScriptableObject[] enums = AssetDatabase
                 .FindAssets($"t:{type.Name}")
@@ -127,33 +127,25 @@ namespace Zlitz.General.Management
             {
                 SerializedObject serializedEnum = new SerializedObject(enumObject);
 
-                SerializedProperty idProperty = serializedEnum.FindProperty("m_id");
-                idProperty.isExpanded = false;
+                SerializedProperty priorityProperty = serializedEnum.FindProperty("m_priority");
 
                 AlignedField alignedField = new AlignedField();
                 root.Add(alignedField);
 
                 root.onChanged += () =>
                 {
-                    ScriptableEnumManager.IO.Save(settings);
+                    ScriptableSingletonManager.IO.Save(settings);
                 };
                 IMGUIContainer idField = new IMGUIContainer(() =>
                 {
                     float labelWidth = EditorGUIUtility.labelWidth;
-                    EditorGUIUtility.labelWidth = 128.0f;
-
-                    bool isExpanded = idProperty.isExpanded;
-                    idProperty.isExpanded = true;
-                    float propertyHeight = EditorGUI.GetPropertyHeight(idProperty);
-                    idProperty.isExpanded = isExpanded;
-
-                    bool multipleLine = propertyHeight > 20.0f;
+                    EditorGUIUtility.labelWidth = 64.0f;
 
                     EditorGUI.BeginChangeCheck();
-                    EditorGUILayout.PropertyField(idProperty, multipleLine ? (string.IsNullOrEmpty(idType.Namespace) ? new GUIContent($"ID ({idType.Name})") : new GUIContent($"ID ({idType.Name} - {idType.Namespace})")) : GUIContent.none);
+                    EditorGUILayout.PropertyField(priorityProperty, new GUIContent("Priority"));
                     if (EditorGUI.EndChangeCheck())
                     {
-                        idProperty.serializedObject.ApplyModifiedProperties();
+                        priorityProperty.serializedObject.ApplyModifiedProperties();
                         root.UpdateChanges();
                     }
 
@@ -161,13 +153,13 @@ namespace Zlitz.General.Management
                 });
                 alignedField.labelContainer.Add(idField);
 
-                ObjectField enumField = new ObjectField();
-                enumField.style.flexGrow = 1.0f;
-                enumField.value = enumObject;
-                enumField.SetEnabled(false);
-                alignedField.fieldContainer.Add(enumField);
+                ObjectField singletonField = new ObjectField();
+                singletonField.style.flexGrow = 1.0f;
+                singletonField.value = enumObject;
+                singletonField.SetEnabled(false);
+                alignedField.fieldContainer.Add(singletonField);
 
-                ScriptableEnumOperation operation = new ScriptableEnumOperation(m_entriesProperty, enumObject, enums, root.UpdateChanges);
+                ScriptableSingletonOperation operation = new ScriptableSingletonOperation(m_entriesProperty, enumObject, enums, root.UpdateChanges);
                 alignedField.fieldContainer.Add(operation);
 
                 root.onChanged += () => operation?.UpdateChanges();
@@ -176,14 +168,14 @@ namespace Zlitz.General.Management
             return root;
         }
 
-        public ScriptableEnumSettingsProvider(string path, SettingsScope scopes, IEnumerable<string> keywords = null) : base(path, scopes, keywords)
+        public ScriptableSingletonSettingsProvider(string path, SettingsScope scopes, IEnumerable<string> keywords = null) : base(path, scopes, keywords)
         {
         }
 
         [SettingsProvider]
-        public static SettingsProvider CreateScriptableEnumSettingsProvider()
+        public static SettingsProvider CreateScriptableSingletonSettingsProvider()
         {
-            return new ScriptableEnumSettingsProvider("Project/Zlitz/Management/Scriptable Enum", SettingsScope.Project);
+            return new ScriptableSingletonSettingsProvider("Project/Zlitz/Management/Scriptable Singleton", SettingsScope.Project);
         }
 
         internal class AlignedField : VisualElement
@@ -310,18 +302,13 @@ namespace Zlitz.General.Management
             }
         }
     
-        internal class ScriptableEnumOperation : VisualElement
+        internal class ScriptableSingletonOperation : VisualElement
         {
-            private static readonly Texture2D s_icon = EditorGUIUtility.IconContent("console.infoicon@2x").image as Texture2D;
-
-            private static readonly Color s_colorAdd         = new Color(0.2f, 0.5f, 0.3f);
-            private static readonly Color s_colorRemove      = new Color(0.6f, 0.2f, 0.2f);
-            private static readonly Color s_colorIncluded    = new Color(0.3f, 0.7f, 0.8f);
-            private static readonly Color s_colorConflicted  = new Color(0.8f, 0.7f, 0.3f);
-            private static readonly Color s_colorNotIncluded = new Color(0.4f, 0.4f, 0.4f);
+            private static readonly Color s_colorSet    = new Color(0.2f, 0.5f, 0.3f);
+            private static readonly Color s_colorRemove = new Color(0.6f, 0.2f, 0.2f);
             
             private SerializedProperty m_entriesProperty;
-            private ScriptableObject   m_enumObject;
+            private ScriptableObject   m_singletonObject;
             private ScriptableObject[] m_groupObjects;
 
             private Action m_onStateChanged;
@@ -329,39 +316,15 @@ namespace Zlitz.General.Management
             private Button m_button;
             private Action m_buttonClick;
 
-            private VisualElement m_icon;
-
             public void UpdateChanges()
             {
-                if (IsIncluded())
-                {
-                    bool conflicted = false;
-                    foreach (ScriptableObject groupObject in m_groupObjects)
-                    {
-                        if (groupObject == m_enumObject || !IsIncluded(groupObject))
-                        {
-                            continue;
-                        }
-                        if (ScriptableEnumManager.CompareId(groupObject, m_enumObject))
-                        {
-                            conflicted = true;
-                            break;
-                        }
-                    }
-                    m_icon.style.unityBackgroundImageTintColor = conflicted ? s_colorConflicted : s_colorIncluded;
-                    m_icon.tooltip = conflicted ? "Entries with duplicated ID will be ignored" : "Included";
-                }
-                else
-                {
-                    m_icon.style.unityBackgroundImageTintColor = s_colorNotIncluded;
-                    m_icon.tooltip = "Not included";
-                }
+
             }
 
-            public ScriptableEnumOperation(SerializedProperty entriesProperty, ScriptableObject enumObject, ScriptableObject[] groupObjects, Action onStateChanged)
+            public ScriptableSingletonOperation(SerializedProperty entriesProperty, ScriptableObject singletonObject, ScriptableObject[] groupObjects, Action onStateChanged)
             {
                 m_entriesProperty = entriesProperty;
-                m_enumObject      = enumObject;
+                m_singletonObject = singletonObject;
                 m_groupObjects    = groupObjects;
                 m_onStateChanged  = onStateChanged;
 
@@ -373,15 +336,6 @@ namespace Zlitz.General.Management
                 m_button.clicked += OnButtonClick;
                 Add(m_button);
 
-                m_icon = new VisualElement();
-                m_icon.style.backgroundImage = s_icon;
-                m_icon.style.width  = 18.0f;
-                m_icon.style.height = 18.0f;
-                m_icon.style.marginLeft  = 2.0f;
-                m_icon.style.marginRight = 8.0f;
-                Add(m_icon);
-
-                UpdateChanges();
                 UpdateState(IsIncluded());
             }
 
@@ -396,7 +350,7 @@ namespace Zlitz.General.Management
                 }
                 else
                 {
-                    m_button.style.backgroundColor = s_colorAdd;
+                    m_button.style.backgroundColor = s_colorSet;
                     m_button.text = "Add";
 
                     m_buttonClick = AddToRegistry;
@@ -413,7 +367,7 @@ namespace Zlitz.General.Management
             {
                 if (obj == null)
                 {
-                    obj = m_enumObject;
+                    obj = m_singletonObject;
                 }
                 for (int i = 0; i < m_entriesProperty.arraySize; i++)
                 {
@@ -438,7 +392,7 @@ namespace Zlitz.General.Management
                 m_entriesProperty.InsertArrayElementAtIndex(index);
 
                 SerializedProperty elementProperty = m_entriesProperty.GetArrayElementAtIndex(index);
-                elementProperty.objectReferenceValue = m_enumObject;
+                elementProperty.objectReferenceValue = m_singletonObject;
 
                 m_entriesProperty.serializedObject.ApplyModifiedProperties();
 
@@ -450,7 +404,7 @@ namespace Zlitz.General.Management
                 for (int i = 0; i < m_entriesProperty.arraySize; i++)
                 {
                     SerializedProperty elementProperty = m_entriesProperty.GetArrayElementAtIndex(i);
-                    if (elementProperty.objectReferenceValue is ScriptableObject obj && obj == m_enumObject)
+                    if (elementProperty.objectReferenceValue is ScriptableObject obj && obj == m_singletonObject)
                     {
                         m_entriesProperty.DeleteArrayElementAtIndex(i);
                         m_entriesProperty.serializedObject.ApplyModifiedProperties();
@@ -475,11 +429,11 @@ namespace Zlitz.General.Management
     }
 
     [InitializeOnLoad]
-    internal static class ScriptableEnumSettingsInitializer
+    internal static class ScriptableSingletonSettingsInitializer
     {
-        static ScriptableEnumSettingsInitializer()
+        static ScriptableSingletonSettingsInitializer()
         {
-            ScriptableEnumSettingsProvider.ResetScriptableEnumTypes();
+            ScriptableSingletonSettingsProvider.ResetScriptableSingletonTypes();
         }
     }
 }
